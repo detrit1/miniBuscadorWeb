@@ -215,7 +215,7 @@ def executar_busca(consulta_texto, relevantes, label=""):
     ranking_antes["relevante"] = ranking_antes["id"].isin(relevantes)
 
     print(f"\n10) RANKING FINAL — ANTES DA MELHORIA")
-    print("    obs: pesos → texto=60%, pagerank=25%, authority=15%")
+    print("    obs: pesos -> texto=60%, pagerank=25%, authority=15%")
     cols = ["posicao_antes", "id", "titulo", "score_texto_norm",
             "pagerank_norm", "authority_norm", "score_final", "top3_antes", "relevante"]
     print(ranking_antes[cols].round(6).to_string(index=False))
@@ -293,13 +293,18 @@ for i, c in enumerate(consultas, 1):
 
 print("\n\n[gerando figura do grafo...]")
 
+print("\nRESUMO DAS CONEXOES (pagina -> paginas referenciadas)")
+for doc in docs:
+    setas = " -> ".join(doc["links"]) if doc["links"] else "(nenhuma)"
+    print(f"   {doc['id']} ({doc['titulo']}): {doc['id']} -> {setas}")
+
 G_plot = nx.DiGraph()
 for doc in docs:
     G_plot.add_node(doc["id"], titulo=doc["titulo"])
     for destino in doc["links"]:
         G_plot.add_edge(doc["id"], destino)
 
-fig, ax = plt.subplots(figsize=(12, 8))
+fig, ax = plt.subplots(figsize=(14, 10))
 
 pos = nx.spring_layout(G_plot, seed=42, k=2.5)
 
@@ -318,27 +323,34 @@ cores = {
 
 node_colors = [cores[n] for n in G_plot.nodes()]
 
-nx.draw_networkx_nodes(G_plot, pos, node_color=node_colors, node_size=1600, ax=ax)
-nx.draw_networkx_edges(G_plot, pos, edge_color="#555555", arrows=True,
-                       arrowsize=20, arrowstyle="-|>",
-                       connectionstyle="arc3,rad=0.1", ax=ax)
-nx.draw_networkx_labels(G_plot, pos, font_size=11, font_weight="bold", ax=ax)
+nx.draw_networkx_nodes(G_plot, pos, node_color=node_colors, node_size=1800,
+                       edgecolors="#333333", linewidths=1.5, ax=ax)
+
+nx.draw_networkx_edges(G_plot, pos, edge_color="#333333", arrows=True,
+                       arrowsize=30, arrowstyle="->",
+                       width=2.2, min_target_margin=20,
+                       connectionstyle="arc3,rad=0.12", ax=ax)
+
+nx.draw_networkx_labels(G_plot, pos, font_size=11, font_weight="bold",
+                        font_color="white", ax=ax)
 
 titulos_curtos = {doc["id"]: doc["titulo"] for doc in docs}
-label_offset = {k: (v[0], v[1] - 0.13) for k, v in pos.items()}
+label_offset = {k: (v[0], v[1] - 0.15) for k, v in pos.items()}
 nx.draw_networkx_labels(G_plot, label_offset,
                         labels=titulos_curtos, font_size=7, ax=ax)
 
 legenda = [
-    mpatches.Patch(color="#4fc3f7", label="Portal"),
-    mpatches.Patch(color="#ef5350", label="Equipes / Pilotos"),
-    mpatches.Patch(color="#66bb6a", label="Corridas / Rankings"),
-    mpatches.Patch(color="#ffa726", label="Tecnologia"),
-    mpatches.Patch(color="#9e9e9e", label="Spam"),
+    mpatches.Patch(color="#4fc3f7", label="Portal (A)"),
+    mpatches.Patch(color="#ef5350", label="Equipes / Pilotos (B,C,D,E)"),
+    mpatches.Patch(color="#66bb6a", label="Corridas / Rankings (F,G,H)"),
+    mpatches.Patch(color="#ffa726", label="Tecnologia (I)"),
+    mpatches.Patch(color="#9e9e9e", label="Spam (J)"),
 ]
-ax.legend(handles=legenda, loc="upper left", fontsize=9)
+ax.legend(handles=legenda, loc="upper left", fontsize=9, title="Legenda",
+          title_fontsize=10)
 
-ax.set_title("Grafo da Mini-Web — Fórmula 1", fontsize=14, fontweight="bold")
+ax.set_title("Grafo Direcionado da Mini-Web — Fórmula 1\n(setas apontam para as páginas referenciadas)",
+             fontsize=14, fontweight="bold")
 ax.axis("off")
 plt.tight_layout()
 plt.savefig("grafo_formula1.png", dpi=150, bbox_inches="tight")
